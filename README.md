@@ -4,7 +4,7 @@ TravelEase is an enterprise-grade full-stack MERN application built with MongoDB
 
 ---
 
-## 🌟 Review 2 Highlights & Core Architecture
+## Highlights & Core Architecture
 
 ### 1. Separate & Secure Authentication System
 - **Two Distinct Experiences**:
@@ -67,7 +67,7 @@ TravelEase is an enterprise-grade full-stack MERN application built with MongoDB
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 | Layer | Technologies |
 |---|---|
@@ -78,7 +78,7 @@ TravelEase is an enterprise-grade full-stack MERN application built with MongoDB
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 MERN/
@@ -119,7 +119,7 @@ MERN/
 └── README.md                   # Complete documentation
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### 1. Database Seeding
 
@@ -168,7 +168,7 @@ Once both servers are running, open your browser:
 
 ---
 
-## 🧪 Automated Testing
+## Automated Testing
 
 An automated end-to-end test suite is included in `server/test_e2e.js`:
 ```bash
@@ -202,7 +202,7 @@ The test suite validates:
 
 ---
 
-## 💳 Payment Gateway Demonstration Guide
+##  Payment Gateway Demonstration Guide
 
 1. Sign in as a traveler at `/login`.
 2. Browse **Tour Packages** (`/packages`) and click on any package (e.g., *Ooty Nilgiri Tea & Heritage Escape*).
