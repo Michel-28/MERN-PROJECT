@@ -55,16 +55,16 @@ export default function Dashboard() {
         <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
           <ShieldCheck className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-bold text-navy-900 mb-2">Demo Session Required</h2>
+        <h2 className="text-xl font-bold text-navy-900 mb-2">Sign In Required</h2>
         <p className="text-xs text-slate-500 mb-6">
-          Enter an email address to view your personal dashboard.
+          Sign in to your TravelEase account to view your personalized dashboard and active itineraries.
         </p>
-        <button
-          onClick={() => openLoginModal()}
-          className="py-3 px-6 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-sm"
+        <Link
+          to="/login"
+          className="inline-block py-3 px-6 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-sm transition"
         >
-          Sign In
-        </button>
+          Sign In to TravelEase
+        </Link>
       </div>
     );
   }

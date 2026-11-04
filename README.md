@@ -1,64 +1,69 @@
-# TravelEase – Travel & Tour Planning Platform (MERN Stack)
+# TravelEase — Smart Travel Planning & Tour Booking Platform (MERN Stack)
 
-A complete, production-grade travel and tour planning web platform built with MongoDB, Express.js, React.js (Vite), and Node.js. TravelEase enables users to discover holiday destinations, browse and filter tour packages, create day-by-day personal trip itineraries with budget tracking, bookmark favorites, make demo reservations with live capacity checks, and manage resources via an Admin portal.
+TravelEase is an enterprise-grade full-stack MERN application built with MongoDB, Express.js, React.js (Vite), and Node.js. It features a complete travel itinerary planner, multi-category budget calculator, tour package booking engine with Razorpay test payment gateway integration and verification, separate JWT-based user and administrator authentication systems, and a mobile-first responsive design.
 
 ---
 
-## 🌟 Key Features & Recent Enhancements
+## 🌟 Review 2 Highlights & Core Architecture
 
-1. **Interactive Itinerary Builder**
-   - **Day-by-Day & Chronological Timeline Views**: Toggle seamlessly between grouped day cards and a continuous vertical chronological timeline.
-   - **Activity Management**: Add, edit, and delete activities with title, location, description, estimated cost (INR), scheduled date, and optional time.
-   - **Activity Date Validation**: Strict server-side and client-side validation ensuring activity dates strictly fall between the trip's start and end dates.
-   - **Reordering**: Reorder activities up and down within any day with real-time persistence.
-   - **Activity Budget Aggregation**: Live calculation of total activity costs with a one-click "Sync to Budget" option.
+### 1. Separate & Secure Authentication System
+- **Two Distinct Experiences**:
+  - **User Portal (`/login`, `/register`)**: Complete registration with full name, email, phone, and password policy (min 6 characters, confirmation validation). Authenticates travelers and issues signed JSON Web Tokens (JWT).
+  - **Administrator Portal (`/admin/login`)**: Dedicated, dark-themed administrative sign-in portal. Verifies role `admin` stored in MongoDB before permitting access.
+- **Server-Side Role-Based Access Control (RBAC)**:
+  - Middleware `protect` cryptographically verifies JWT Bearer tokens and active account statuses.
+  - Middleware `authorize('admin')` restricts all administrative endpoints (`/api/v1/admin/*`, package mutations, destination mutations).
+  - Normal users cannot access administrative APIs or view/modify another user's private bookings.
+- **Security Safeguards**:
+  - Passwords hashed using `bcryptjs` with salt rounds. Never stored or returned in plaintext.
+  - Public registration strictly enforces `role: 'user'` (cannot escalate to admin via request tampering).
+  - Initial administrator is securely created via seed script reading credentials from environment variables (`ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 
-2. **Trip Budget Calculator**
-   - **Dedicated Budget Tab**: Full financial breakdown across 6 distinct categories: Transportation, Accommodation, Food, Activities, Shopping, and Other.
-   - **Authoritative Server Calculations**: Backend calculates total planned expenses, remaining balance, and budget utilization percentage to prevent floating-point inaccuracies.
-   - **Expense Breakdown Chart**: Color-coded visual breakdown bars showing each category's share of overall expenses.
-   - **Per-Traveler Cost**: Real-time per-traveler estimated cost calculation based on squad size.
-   - **Linked Tour Package Separation**: Displays linked package bookings as paid separately to completely eliminate double counting.
+### 2. Complete Tour Booking & Payment Gateway Workflow
+- **Review & Checkout Page (`/packages/:slug/book`)**:
+  - Displays package summary, hero image, destination, duration, and departure date availability.
+  - Interactive traveler count selector with live capacity checking against remaining spots.
+  - Itemized price breakdown: base rate per person, GST/taxes included, and grand total.
+  - Server calculates authoritative pricing on the backend (never trusts frontend totals).
+- **Payment Lifecycle & Verification**:
+  - **Gateway Integration**: Integrated with the official **Razorpay SDK** in Test Mode.
+  - **Cryptographic Signature Verification**: Server validates HMAC SHA256 payment signatures (`order_id|payment_id` against `RAZORPAY_KEY_SECRET`).
+  - **Academic Test Simulation Fallback**: When running in college lab environments without live internet Razorpay API keys, a seamless test gateway dialog is available allowing full cryptographic verification of orders, transaction IDs, payment methods (UPI, NetBanking, Card), simulated failures, and cancellation retries.
+  - **Booking & Payment States**:
+    - Booking States: `Pending Payment` ➔ `Confirmed` ➔ `Cancelled` or `Payment Failed`.
+    - Payment States: `created` ➔ `pending` ➔ `paid` ➔ `refunded` or `failed`.
+  - **Idempotency Safeguard**: Duplicate payment callback requests do not create duplicate confirmations or receipts.
+- **Official Booking Confirmation & Receipts (`/booking-confirmation/:id`)**:
+  - Formally generated booking confirmation with reference code (`TE-XXXXXX`), verified transaction ID, payment method, traveler count, and itemized receipt breakdown.
+  - **Download / Print Receipt**: Print-friendly CSS media styling allows one-click printing or saving as a PDF receipt with TravelEase branding.
+- **Booking Cancellation & Refund Management**:
+  - Evaluates package cancellation policy based on days remaining until departure date:
+    - `> 7 days`: 100% refund.
+    - `3 to 7 days`: 70% refund.
+    - `< 48 hours`: Non-refundable.
+  - Records cancellation reasons, timestamps, and test refund transaction references in both `Booking` and `Payment` models in MongoDB.
 
-3. **Trip Travel Checklist**
-   - **Trip-Independent Checklists**: Every trip maintains its own distinct checklist stored in MongoDB.
-   - **Pre-populated Essentials**: Automatically populated with 7 essential travel tasks (ID documents, packing, toiletries, transport, bookings, chargers, itinerary review).
-   - **Custom Tasks & Filtering**: Add custom checklist items, filter by 'All', 'Pending', or 'Completed', and edit/delete tasks on the fly.
-   - **Real-Time Progress**: Dynamic completion percentage bar and completed vs. remaining item counters.
+### 3. Administrator Booking & User Management (`/admin`)
+- **Dashboard Overview Metrics**:
+  - Total Destinations, Tour Packages, Registered Users, Total Bookings.
+  - Real-time **Verified Paid Revenue** (excludes unpaid, pending, or failed attempts).
+  - Reservation Pipeline distribution: Confirmed (Paid) vs. Pending Payment vs. Cancelled.
+- **Bookings Management (`/admin/bookings`)**:
+  - Search by reference code, guest email, customer name, package title, destination.
+  - Filters by booking status (`Confirmed`, `Pending Payment`, `Cancelled`, `Payment Failed`) and payment status (`paid`, `pending`, `failed`, `refunded`).
+  - Detailed modal inspection showing customer phone, gateway order IDs, transaction IDs, payment timestamps, and cancellation audit trails.
+- **Registered Users Directory (`/admin/users`)**:
+  - Table of all accounts, roles (`user` vs `admin`), contact numbers, registration dates, and reservation counts.
 
-4. **Enhanced Personal Dashboard (`/dashboard`)**
-   - **Real Database Statistics**: Live metrics aggregating planned trips, confirmed vs. cancelled bookings, total trip spending, and average budget utilization.
-   - **Upcoming Departure Countdowns**: Visual badges displaying "Departs in X days" or "Ongoing Now" for scheduled trips.
-   - **Cross-Trip Actionables**: Highlights next scheduled itinerary activities and incomplete checklist tasks directly on the dashboard.
-   - **Quick Actions & Empty States**: Polished empty states for new demo accounts with shortcuts to create trips, explore destinations, or view bookings.
-
-5. **Destination & Package Comparison**
-   - **Side-by-Side Comparison**: Select up to 3 destinations or packages on their respective listing pages.
-   - **Floating Comparison Bar**: Floating tray displaying selected items with quick launch to the comparison modal.
-   - **Accurate Attribute Comparison**: Compares location, category, suggested duration, estimated daily budget, top attractions, and best time to visit for destinations; compares price per traveler, duration, destination, rating/reviews, next departure date, inclusions, and exclusions for tour packages without invented data.
-
-6. **Modern Homepage & Showcase**
-   - High-impact Hero section with real travel imagery, instant search, and quick destination tags.
-   - Popular destinations cards (Ooty, Manali, Goa, Jaipur, Kerala, Bali, Kashmir, Singapore).
-   - Curated tour packages with live pricing in INR, star ratings, and review counts.
-   - Travel categories (Hill Station, Beaches, Cultural, Nature, Family, Adventure).
-
-7. **Tour Packages & Live Capacity Reservations**
-   - Search, destination filter, duration filter (short/medium/extended), and price slider.
-   - Package detail views with day-by-day itinerary accordions, inclusions, and exclusions.
-   - Live date availability check querying MongoDB confirmed bookings against maximum traveler capacity.
-   - Server-side price recalculation before saving bookings to MongoDB.
-
-8. **Admin Management Portal**
-   - Real-time overview metrics: total destinations, packages, bookings, and gross demo revenue.
-   - Reservation status visual distribution (Confirmed vs. Cancelled).
-   - Full CRUD management for Destinations (create, edit, delete, publish/unpublish).
-   - Full CRUD management for Tour Packages with day-by-day itinerary builder.
-   - Customer booking inspector with administrative cancellation controls.
-
-9. **Lightweight Demo Authentication**
-   - Instant sign-in with any valid email address; no passwords, OTPs, or external verification required.
-   - Saved to browser `localStorage` and automatically restored across page refreshes.
+### 4. Fully Responsive Mobile & Tablet Design
+- Mobile-first layout tested across standard responsive widths:
+  - **320 px** (Narrow mobile)
+  - **375 px** (Common mobile)
+  - **430 px** (Large mobile)
+  - **768 px** (Tablet portrait)
+  - **1024 px** (Tablet landscape / Small laptop)
+  - **1440 px** (Desktop)
+- Responsive navigation drawer with hamburger toggle, role-aware navigation links, touch-friendly tap targets, and no horizontal scroll overflows.
 
 ---
 
@@ -66,53 +71,52 @@ A complete, production-grade travel and tour planning web platform built with Mo
 
 | Layer | Technologies |
 |---|---|
-| **Frontend** | React 18, Vite, Tailwind CSS, React Router DOM, Axios, Lucide React, React Hot Toast |
-| **Backend** | Node.js, Express.js, Mongoose, CORS, Morgan, Dotenv |
-| **Database** | MongoDB (v8.0+ / Community Edition / Atlas) |
-| **Orchestration** | npm, concurrently |
+| **Frontend** | React 19, Vite, Tailwind CSS, React Router DOM v7, Axios, Lucide React, React Hot Toast |
+| **Backend** | Node.js, Express.js, Mongoose, JWT (`jsonwebtoken`), `bcryptjs`, `razorpay`, CORS, Morgan, Dotenv |
+| **Database** | MongoDB (v7.0+ / Community Edition / Atlas) |
+| **Testing** | Node.js Automated E2E Test Suite (`server/test_e2e.js`) |
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```
 MERN/
 ├── client/                     # Vite React Frontend
 │   ├── src/
-│   │   ├── components/         # Navbar, Footer, DestinationCard, PackageCard, LoadingSpinner, etc.
-│   │   ├── context/            # DemoUserContext (email session & modal state)
+│   │   ├── components/         # Navbar, ProtectedRoute, AdminRoute, DestinationCard, PackageCard, etc.
+│   │   ├── context/            # AuthContext (JWT session, login, adminLogin, register, logout)
 │   │   ├── layouts/            # RootLayout (Navbar, Outlet, Footer, Toaster)
 │   │   ├── pages/              # Home, Destinations, DestinationDetails, Packages,
-│   │   │                       # PackageDetails, BookingFlow, BookingConfirmation,
+│   │   │                       # PackageDetails, BookingFlow (Checkout), BookingConfirmation,
 │   │   │                       # MyBookings, Favorites, TripPlanner, TripNew, TripDetail,
-│   │   │                       # Login, Dashboard, About, Contact, NotFound
-│   │   │   └── admin/          # AdminDashboard, AdminDestinations, AdminDestinationForm,
-│   │   │                       # AdminPackages, AdminPackageForm, AdminBookings
-│   │   ├── services/           # api.js (Axios API client)
-│   │   ├── App.jsx             # React Router route registry
-│   │   ├── main.jsx            # Entrypoint
-│   │   └── index.css           # Tailwind CSS directives & custom styles
-│   ├── index.html              # HTML shell with fonts and metadata
-│   ├── tailwind.config.js      # Custom theme colors (teal, navy)
-│   ├── vite.config.js          # Vite configuration
+│   │   │                       # Login, Register, Dashboard, About, Contact, NotFound
+│   │   │   └── admin/          # AdminDashboard, AdminBookings, AdminUsers,
+│   │   │                       # AdminDestinations, AdminPackages, AdminLogin
+│   │   ├── services/           # api.js (Axios API client with JWT Bearer interceptor)
+│   │   ├── App.jsx             # Route registry & ProtectedRoute / AdminRoute guards
+│   │   ├── main.jsx            # React root entrypoint
+│   │   └── index.css           # Tailwind CSS directives & media print styles
+│   ├── .env.example            # Frontend environment variable template
 │   └── package.json
 │
-├── server/                     # Express & Node Backend
+├── server/                     # Express API Server
 │   ├── src/
 │   │   ├── config/             # db.js (Mongoose connection)
-│   │   ├── models/             # Destination, TourPackage, Trip, Favorite, Booking
-│   │   ├── controllers/        # destinationController, packageController, tripController,
-│   │   │                       # favoriteController, bookingController, adminController
-│   │   ├── routes/             # REST endpoints mounted under /api/v1
-│   │   ├── middleware/         # errorHandler.js
-│   │   ├── seed/               # seedData.js, seed.js (idempotent seeder)
-│   │   ├── app.js              # Express app definition
+│   │   ├── models/             # User, Booking, Payment, Destination, TourPackage, Trip, Favorite
+│   │   ├── controllers/        # authController, paymentController, bookingController,
+│   │   │                       # adminController, destinationController, packageController, tripController
+│   │   ├── middleware/         # auth.js (protect, authorize, optionalProtect), errorHandler.js
+│   │   ├── routes/             # authRoutes, paymentRoutes, bookingRoutes, adminRoutes, etc.
+│   │   ├── seed/               # seed.js, seedData.js
+│   │   ├── app.js              # Express app definition & middleware
 │   │   └── server.js           # Server bootstrap
-│   ├── .env.example
+│   ├── test_e2e.js             # Automated E2E test suite (21 test cases)
+│   ├── .env.example            # Backend environment variable template
 │   └── package.json
 │
 ├── package.json                # Root orchestration scripts
-└── README.md                   # Full documentation
+└── README.md                   # Complete documentation
 ```
 
 ---
@@ -121,52 +125,52 @@ MERN/
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher (v22+ recommended)
-- **MongoDB**: Local MongoDB instance running on port 27017 or a MongoDB Atlas connection string.
+- **MongoDB**: Local MongoDB instance running on `mongodb://127.0.0.1:27017` or MongoDB Atlas.
 
-### 1. Installation
-Clone or navigate to the project directory and install all dependencies:
-```bash
-# From workspace root
-npm run install:all
-```
-*(Or navigate into `client` and `server` folders and run `npm install` in each).*
+### 1. Environment Configuration
 
-### 2. Environment Configuration
 **Backend (`server/.env`):**
 ```env
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/travelease
 CLIENT_URL=http://localhost:5173
 NODE_ENV=development
+JWT_SECRET=travelease_jwt_secret_key_review2_super_secure_2026
+JWT_EXPIRE=7d
+ADMIN_NAME=TravelEase Administrator
+ADMIN_EMAIL=admin@travelease.com
+ADMIN_PASSWORD=Admin@TravelEase2026!
+RAZORPAY_KEY_ID=rzp_test_placeholder_key
+RAZORPAY_KEY_SECRET=rzp_test_placeholder_secret
 ```
 
 **Frontend (`client/.env`):**
 ```env
 VITE_API_BASE_URL=http://localhost:5000/api/v1
+VITE_RAZORPAY_KEY_ID=rzp_test_placeholder_key
 ```
 
-### 3. Seed the Database
-Populate MongoDB with 8+ detailed holiday destinations and 12+ tour packages:
+### 2. Database Seeding
+Populate MongoDB with default destinations, tour packages, verified sample payments, and the hashed Administrator and Demo accounts:
 ```bash
 npm run seed
 # or
 cd server && npm run seed
 ```
 
-### 4. Running the Application
-
-You can launch both server and client concurrently using:
+### 3. Launching the Application
+Run both server and client concurrently from the root directory:
 ```bash
 npm run dev
 ```
 
 Or run them individually in separate terminals:
 ```bash
-# Terminal 1 - Backend API Server (http://localhost:5000)
+# Terminal 1 — Backend API Server (http://localhost:5000)
 cd server
 npm run dev
 
-# Terminal 2 - Frontend Client (http://localhost:5173)
+# Terminal 2 — Frontend Client (http://localhost:5173)
 cd client
 npm run dev
 ```
@@ -175,77 +179,62 @@ Open your browser at **`http://localhost:5173`**.
 
 ---
 
-## 📡 REST API Summary (`/api/v1`)
+## 🧪 Automated Testing
 
-| Resource | Method | Endpoint | Description |
-|---|---|---|---|
-| **Health** | `GET` | `/health` | Server heartbeat & status |
-| **Destinations** | `GET` | `/destinations` | List destinations (search, category, sort) |
-| | `GET` | `/destinations/featured` | Top 6 destinations for homepage |
-| | `GET` | `/destinations/:idOrSlug` | Destination details + related packages |
-| | `POST` | `/destinations` | Create destination (Admin) |
-| | `PATCH` | `/destinations/:id` | Update destination (Admin) |
-| | `DELETE` | `/destinations/:id` | Delete destination (Admin) |
-| **Packages** | `GET` | `/packages` | List packages (search, destination, price, duration) |
-| | `GET` | `/packages/:idOrSlug` | Package details with day-by-day itinerary |
-| | `GET` | `/packages/:idOrSlug/availability` | Check remaining seats on departure date |
-| | `POST` | `/packages` | Create package (Admin) |
-| | `PATCH` | `/packages/:id` | Update package (Admin) |
-| | `DELETE` | `/packages/:id` | Delete / unpublish package (Admin) |
-| **Trips** | `GET` | `/trips?email=...` | List trips for demo user |
-| | `POST` | `/trips` | Create custom trip itinerary |
-| | `GET` | `/trips/:id` | Trip details and activities |
-| | `PATCH` | `/trips/:id` | Update trip activities, dates, or notes |
-| | `DELETE` | `/trips/:id` | Delete trip |
-| **Bookings** | `GET` | `/bookings?email=...` | Get user bookings |
-| | `POST` | `/bookings` | Create confirmed demo booking |
-| | `GET` | `/bookings/:id` | Retrieve booking confirmation |
-| | `PATCH` | `/bookings/:id/cancel` | Cancel booking & release capacity |
-| **Favorites** | `GET` | `/favorites?email=...` | Get bookmarked destinations |
-| | `POST` | `/favorites` | Bookmark destination |
-| | `DELETE` | `/favorites/:id` | Remove bookmark |
-| **Admin** | `GET` | `/admin/dashboard/stats` | Aggregated analytics & gross demo revenue |
-| | `GET` | `/admin/bookings` | All guest bookings with filters |
-| | `GET` | `/admin/destinations` | All destinations (including drafts) |
-| | `GET` | `/admin/packages` | All tour packages (including drafts) |
+An automated end-to-end test suite is included in `server/test_e2e.js`:
+```bash
+cd server
+npm test
+```
+The test suite validates:
+1. User registration with field validation.
+2. Prevention of role escalation during public registration.
+3. Duplicate email rejection.
+4. Cryptographic password hashing in MongoDB.
+5. User login and JWT token issuance.
+6. Invalid credentials rejection.
+7. Role-based authorization: normal users blocked from admin endpoints with 403 Forbidden.
+8. Unauthenticated requests to private endpoints blocked with 401 Unauthorized.
+9. Administrator login with seeded admin credentials.
+10. Administrative stats querying.
+11. Administrative user directory retrieval.
+12. Tour package booking creation with pending payment status.
+13. Authoritative server-side price calculation.
+14. Payment order generation.
+15. Payment signature verification and transition to confirmed and paid.
+16. Idempotency against duplicate payment confirmations.
+17. Cross-user access prevention (users cannot view another user's bookings).
+18. Downloadable receipt retrieval.
+19. Cancellation and refund evaluation.
+20. Administrative booking inspection.
 
 ---
 
-## 🎓 Demonstration Guide for Presentation
+## 🔑 Credentials for College Demonstration
 
-When demonstrating TravelEase to evaluators:
+| Account Type | Email | Password | Role | Access Route |
+|---|---|---|---|---|
+| **Administrator** | `admin@travelease.com` | `Admin@TravelEase2026!` | `admin` | `/admin/login` ➔ `/admin` |
+| **Demo Traveler** | `traveler@travelease.com` | `Traveler@2026!` | `user` | `/login` ➔ `/dashboard` |
 
-1. **Homepage Walkthrough**:
-   - Show the dynamic hero search with quick tags like `Ooty`, `Manali`, `Goa`.
-   - Scroll through popular destinations, categories, and featured tour packages.
-2. **Destination Exploration**:
-   - Click **Destinations** in the navbar.
-   - Filter by `Hill Station` or `Beaches`. Sort by budget.
-   - Click into **Ooty** to show attractions, travel tips, and related packages.
-3. **Demo User Sign-In**:
-   - Click **Demo Login** in the navbar. Enter `student@college.edu` and submit.
-   - Notice the persistent avatar badge and user dropdown.
-4. **Tour Booking Flow**:
-   - Open **Ooty Nilgiri Tea & Heritage Escape**.
-   - Select a departure date and change travelers to `2`.
-   - Point out live capacity checking and server-side price calculation.
-   - Click **Confirm Demo Booking** to generate a unique `TE-XXXXXX` reference code.
-5. **My Bookings & Cancellation**:
-   - Open **My Bookings** to view the live reservation.
-   - Test canceling the booking to demonstrate status updates and capacity release.
-6. **Personal Trip Planner**:
-   - Click **Plan a Trip** -> **Create New Trip**.
-   - Name it `Ooty Friends Reunion`, set 3 travelers, budget ₹40,000.
-   - Add activities like `Botanical Garden Stroll` (₹600) and `Toy Train Ride` (₹1,200).
-   - Point out the visual budget tracker progress bar showing remaining funds.
-7. **Admin Management Console**:
-   - Click **Admin Demo** in the top navigation bar.
-   - Review metrics cards, confirmed gross revenue, and status breakdown chart.
-   - Demonstrate adding or editing a destination or tour package.
+*(Note: Both login screens include convenient **Auto Fill** buttons for immediate demonstration during reviews).*
 
 ---
 
-## 💡 Notes & Known Limitations
+## 💳 Payment Gateway Demonstration Guide
 
-- **Demo Identity**: This application intentionally implements a lightweight demo identity based on user-entered email addresses stored in `localStorage` without passwords or JWT tokens, as specified for rapid demonstration.
-- **Mock Payments**: Booking confirmations simulate reservations directly into MongoDB without collecting actual credit card data.
+1. Sign in as a traveler at `/login`.
+2. Browse **Tour Packages** (`/packages`) and click on any package (e.g., *Ooty Nilgiri Tea & Heritage Escape*).
+3. On the package details page, review itinerary and click **Proceed to Checkout & Payment**.
+4. On the **Review & Secure Checkout** page (`/packages/:slug/book`):
+   - Choose a departure date.
+   - Adjust traveler count (observe live subtotal recalculation).
+   - Enter optional contact phone and special requests.
+   - Review cancellation terms and click **Proceed to Secure Payment**.
+5. The gateway modal will appear with the generated **Order ID**:
+   - Click **Simulate Successful Payment** (or test live Razorpay checkout if test keys are configured).
+   - The backend cryptographically validates the payment signature and transitions the reservation to `Confirmed` and `PAID`.
+6. You will be redirected to the **Booking & Payment Confirmation** screen (`/booking-confirmation/:id`).
+7. Click **Download / Print Receipt** to view the formal receipt and test printing or saving as PDF.
+8. Go to **My Bookings** (`/my-bookings`) to view reservation status, filter by status, or test cancellation with refund policy calculation.
+9. Sign in as Administrator at `/admin/login` to inspect the verified booking in **Customer Bookings Management** (`/admin/bookings`) with transaction references and updated gross revenue.

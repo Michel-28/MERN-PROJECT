@@ -1,51 +1,86 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, User, ShieldCheck, Compass, ArrowRight } from 'lucide-react';
-import { useDemoUser } from '../context/DemoUserContext';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, Compass, ArrowRight, KeyRound } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const { user, login } = useDemoUser();
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [email, setEmail] = useState(user?.email || '');
-  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
-  const handleSubmit = (e) => {
+  const redirectPath = location.state?.from?.pathname || '/dashboard';
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) {
-      toast.error('Please enter a valid email address');
+    setError('');
+    setUnverifiedEmail('');
+
+    if (!email || !password) {
+      setError('Please enter both email and password');
       return;
     }
-    login(email, name);
-    toast.success(`Welcome to TravelEase, ${name || email.split('@')[0]}!`);
-    navigate('/my-trips');
+
+    try {
+      setLoading(true);
+      const cleanEmail = email.trim().toLowerCase();
+      const user = await login(cleanEmail, password);
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate(redirectPath, { replace: true });
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Invalid email or password';
+      setError(msg);
+      if (err.response?.status === 403 && err.response?.data?.isEmailVerified === false) {
+        setUnverifiedEmail(err.response?.data?.email || email.trim().toLowerCase());
+      }
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4 py-16">
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200/90 shadow-2xl relative overflow-hidden space-y-6">
+    <div className="min-h-[75vh] flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xl relative overflow-hidden space-y-6">
         
         {/* Top Header */}
         <div className="text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-teal-500/20">
             <Compass className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-extrabold text-navy-900 tracking-tight">
-            Demo Traveler Sign-In
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 tracking-tight">
+            Traveler Sign In
           </h1>
           <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-            Enter any email address to immediately access personalized trip planning, favorites, and demo bookings.
+            Enter your credentials to access your trips, booked tours, and payment receipts.
           </p>
         </div>
 
-        {/* Demo Identity Notice */}
-        <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-100 flex items-start gap-2.5 text-xs text-teal-900">
-          <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong>Demonstration Identity Mode:</strong> No password or OTP required. State is persisted in your browser session.
-          </p>
-        </div>
+        {/* Error alert */}
+        {error && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium animate-fadeIn space-y-2">
+            <p>{error}</p>
+            {unverifiedEmail && (
+              <div className="pt-1">
+                <Link
+                  to={`/verify-otp?email=${encodeURIComponent(unverifiedEmail)}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-sm transition"
+                >
+                  <span>Verify Email OTP Now</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -58,44 +93,82 @@ export default function Login() {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 placeholder="e.g. traveler@travelease.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 font-medium text-navy-900 text-sm focus:border-teal-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 font-medium text-navy-900 text-xs sm:text-sm focus:border-teal-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
-              Display Name (Optional)
+              Password <span className="text-teal-600">*</span>
             </label>
             <div className="relative">
-              <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                type="text"
-                placeholder="e.g. Priya Sharma"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 font-medium text-navy-900 text-sm focus:border-teal-500"
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 font-medium text-navy-900 text-xs sm:text-sm focus:border-teal-500 focus:outline-none"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-navy-900 transition"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3.5 px-4 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99]"
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
             >
-              <span>Continue to Platform</span>
+              <span>{loading ? 'Authenticating...' : 'Sign In to Account'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </form>
 
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-          <Link to="/" className="hover:text-slate-600">Return to Homepage</Link>
-          <Link to="/admin" className="font-semibold text-teal-600 hover:text-teal-700">Open Admin Demo &rarr;</Link>
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase">
+            <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        {/* Google OAuth Button */}
+        <GoogleAuthButton role="user" buttonText="Continue with Google" />
+
+        {/* Links */}
+        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div>
+            Don't have an account?{' '}
+            <Link to="/register" className="font-bold text-teal-600 hover:text-teal-700 hover:underline">
+              Register now
+            </Link>
+          </div>
+          <Link
+            to="/admin/login"
+            className="inline-flex items-center gap-1 font-bold text-navy-900 hover:text-teal-600 transition"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+            <span>Admin Portal</span>
+          </Link>
         </div>
 
       </div>

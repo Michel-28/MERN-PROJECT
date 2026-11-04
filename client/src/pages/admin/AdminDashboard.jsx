@@ -11,7 +11,11 @@ import {
   Plus,
   ShieldCheck,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  Users,
+  Clock,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { getAdminStats } from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -35,23 +39,22 @@ export default function AdminDashboard() {
 
   const stats = data?.stats || {};
   const recentBookings = data?.recentBookings || [];
-  const statusData = data?.statusData || [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 animate-fadeIn">
       
       {/* Top Demo Admin Notice Banner */}
       <div className="bg-gradient-to-r from-navy-900 to-navy-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-bold uppercase tracking-wider">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Academic Demonstration Console</span>
+            <span>Administrator Control Console</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             TravelEase Management Portal
           </h1>
           <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
-            Manage destinations, configure tour packages, track customer reservations, and inspect database analytics in real time.
+            Role-verified admin environment: manage destinations, configure tour packages, inspect customer payments, monitor refunds, and audit system metrics.
           </p>
         </div>
 
@@ -75,73 +78,61 @@ export default function AdminDashboard() {
       </div>
 
       {/* Nav Tabs to Sub-Admin Sections */}
-      <div className="flex items-center gap-3 border-b border-slate-200 pb-3 text-xs font-bold">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3 text-xs font-bold">
         <Link
           to="/admin"
           className="px-4 py-2 rounded-xl bg-navy-900 text-teal-300 shadow-sm"
         >
-          Overview & Stats
-        </Link>
-        <Link
-          to="/admin/destinations"
-          className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-        >
-          Manage Destinations ({stats.totalDestinations || 0})
-        </Link>
-        <Link
-          to="/admin/packages"
-          className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-        >
-          Manage Packages ({stats.totalPackages || 0})
+          Overview & Metrics
         </Link>
         <Link
           to="/admin/bookings"
           className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
         >
-          All Bookings ({stats.totalBookings || 0})
+          Manage Bookings ({stats.totalBookings || 0})
+        </Link>
+        <Link
+          to="/admin/users"
+          className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+        >
+          Registered Users ({stats.totalUsers || 0})
+        </Link>
+        <Link
+          to="/admin/destinations"
+          className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+        >
+          Destinations ({stats.totalDestinations || 0})
+        </Link>
+        <Link
+          to="/admin/packages"
+          className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+        >
+          Tour Packages ({stats.totalPackages || 0})
         </Link>
       </div>
 
-      {/* Stat Cards Grid */}
+      {/* Primary Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
-        {/* Destinations */}
+        {/* Verified Revenue */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Total Destinations
+              Verified Gateway Revenue
             </span>
-            <div className="text-3xl font-black text-navy-900 mt-1">
-              {stats.totalDestinations || 0}
+            <div className="text-2xl sm:text-3xl font-black text-navy-900 mt-1">
+              ₹{Number(stats.totalDemoBookingValue || 0).toLocaleString('en-IN')}
             </div>
-            <Link to="/admin/destinations" className="text-[11px] font-semibold text-teal-600 hover:underline mt-2 inline-block">
-              Manage destinations &rarr;
-            </Link>
+            <span className="text-[11px] font-semibold text-emerald-600 mt-1.5 block">
+              ✓ Paid & confirmed only
+            </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <MapPin className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <IndianRupee className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Packages */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Total Packages
-            </span>
-            <div className="text-3xl font-black text-navy-900 mt-1">
-              {stats.totalPackages || 0}
-            </div>
-            <Link to="/admin/packages" className="text-[11px] font-semibold text-teal-600 hover:underline mt-2 inline-block">
-              Manage tour packages &rarr;
-            </Link>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <Package className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Bookings */}
+        {/* Total Bookings */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
@@ -150,8 +141,9 @@ export default function AdminDashboard() {
             <div className="text-3xl font-black text-navy-900 mt-1">
               {stats.totalBookings || 0}
             </div>
-            <span className="text-[11px] font-medium text-emerald-600 mt-2 inline-block">
-              {stats.confirmedBookings || 0} Confirmed • {stats.cancelledBookings || 0} Cancelled
+            <span className="text-[11px] font-medium text-slate-500 mt-1.5 block">
+              <strong className="text-emerald-600">{stats.confirmedBookings || 0}</strong> paid •{' '}
+              <strong className="text-amber-600">{stats.pendingPaymentBookings || 0}</strong> pending
             </span>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
@@ -159,21 +151,39 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Total Demo Value */}
+        {/* Registered Users */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Demo Booking Value
+              Registered Users
+            </span>
+            <div className="text-3xl font-black text-navy-900 mt-1">
+              {stats.totalUsers || 0}
+            </div>
+            <Link to="/admin/users" className="text-[11px] font-semibold text-teal-600 hover:underline mt-1.5 inline-block">
+              View user accounts &rarr;
+            </Link>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Packages & Destinations */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+              Active Inventory
             </span>
             <div className="text-2xl font-black text-navy-900 mt-1">
-              ₹{Number(stats.totalDemoBookingValue || 0).toLocaleString('en-IN')}
+              {stats.totalPackages || 0} Packages
             </div>
-            <span className="text-[11px] font-medium text-slate-400 mt-2 inline-block">
-              Confirmed Gross Value
+            <span className="text-[11px] text-slate-400 mt-1.5 block">
+              Across {stats.totalDestinations || 0} destinations
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <IndianRupee className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
+            <Package className="w-6 h-6" />
           </div>
         </div>
 
@@ -187,7 +197,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-base font-bold text-navy-900">Recent Customer Bookings</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Real-time reservations recorded in MongoDB</p>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time reservations and payment statuses recorded in MongoDB</p>
             </div>
             <Link
               to="/admin/bookings"
@@ -205,9 +215,10 @@ export default function AdminDashboard() {
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
                     <th className="py-3 px-2">Ref</th>
-                    <th className="py-3 px-2">Customer</th>
+                    <th className="py-3 px-2">Guest</th>
                     <th className="py-3 px-2">Package</th>
                     <th className="py-3 px-2">Amount</th>
+                    <th className="py-3 px-2">Payment</th>
                     <th className="py-3 px-2">Status</th>
                   </tr>
                 </thead>
@@ -218,20 +229,33 @@ export default function AdminDashboard() {
                         {b.bookingReference}
                       </td>
                       <td className="py-3 px-2 text-slate-600 truncate max-w-[120px]">
-                        {b.email}
+                        {b.customerName || b.email || 'Guest'}
                       </td>
-                      <td className="py-3 px-2 text-navy-900 font-semibold truncate max-w-[180px]">
-                        {b.packageTitleSnapshot}
+                      <td className="py-3 px-2 text-navy-900 font-semibold truncate max-w-[160px]">
+                        {b.packageTitleSnapshot || b.package?.title || 'Tour Package'}
                       </td>
                       <td className="py-3 px-2 font-bold text-navy-900">
-                        ₹{Number(b.totalAmount).toLocaleString('en-IN')}
+                        ₹{Number(b.totalAmount || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-2">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                            b.paymentStatus === 'paid'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {b.paymentStatus || 'pending'}
+                        </span>
                       </td>
                       <td className="py-3 px-2">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             b.status === 'Confirmed'
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-rose-100 text-rose-800'
+                              : b.status === 'Cancelled'
+                              ? 'bg-slate-100 text-slate-700'
+                              : 'bg-amber-100 text-amber-800'
                           }`}
                         >
                           {b.status}
@@ -245,12 +269,12 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Right Column: Status Visualization & Health */}
+        {/* Right Column: Status Visualization & Security Check */}
         <div className="space-y-6">
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-navy-900 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-teal-600" />
-              Reservation Status
+              Reservation Pipeline
             </h3>
 
             {/* Visual ratio bar */}
@@ -261,7 +285,14 @@ export default function AdminDashboard() {
                   style={{
                     width: `${stats.totalBookings > 0 ? ((stats.confirmedBookings || 0) / stats.totalBookings) * 100 : 100}%`,
                   }}
-                  title="Confirmed"
+                  title="Confirmed (Paid)"
+                />
+                <div
+                  className="bg-amber-500 h-full transition-all duration-500"
+                  style={{
+                    width: `${stats.totalBookings > 0 ? ((stats.pendingPaymentBookings || 0) / stats.totalBookings) * 100 : 0}%`,
+                  }}
+                  title="Pending Payment"
                 />
                 <div
                   className="bg-rose-500 h-full transition-all duration-500"
@@ -272,28 +303,41 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div className="flex items-center justify-between text-xs pt-1">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-teal-600" />
-                  <span className="text-slate-600">
-                    Confirmed: <strong>{stats.confirmedBookings || 0}</strong>
-                  </span>
+              <div className="space-y-1.5 text-xs pt-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-teal-600" />
+                    <span className="text-slate-600">Confirmed (Paid):</span>
+                  </div>
+                  <strong className="text-navy-900">{stats.confirmedBookings || 0}</strong>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-500" />
-                  <span className="text-slate-600">
-                    Cancelled: <strong>{stats.cancelledBookings || 0}</strong>
-                  </span>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span className="text-slate-600">Pending Payment:</span>
+                  </div>
+                  <strong className="text-navy-900">{stats.pendingPaymentBookings || 0}</strong>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <span className="text-slate-600">Cancelled / Refunded:</span>
+                  </div>
+                  <strong className="text-navy-900">{stats.cancelledBookings || 0}</strong>
                 </div>
               </div>
             </div>
 
             <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-500 space-y-2">
-              <p>
-                ✓ MongoDB connection is healthy and responsive.
+              <p className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>JWT Authentication & RBAC Active</span>
               </p>
-              <p>
-                ✓ Endpoints authenticated under demonstration identity.
+              <p className="flex items-center gap-1.5 text-slate-600">
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                <span>Razorpay HMAC SHA256 Signature Verification</span>
               </p>
             </div>
           </div>

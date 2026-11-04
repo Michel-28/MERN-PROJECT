@@ -46,12 +46,12 @@ export default function Favorites() {
         <p className="text-xs text-slate-500 mb-6">
           Sign in with your email to see and manage your bookmarked dream destinations.
         </p>
-        <button
-          onClick={() => openLoginModal()}
-          className="py-3 px-6 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-sm"
+        <Link
+          to="/login"
+          className="inline-block py-3 px-6 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-sm transition"
         >
-          Sign In with Email
-        </button>
+          Sign In to TravelEase
+        </Link>
       </div>
     );
   }
