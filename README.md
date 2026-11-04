@@ -119,63 +119,52 @@ MERN/
 └── README.md                   # Complete documentation
 ```
 
----
-
 ## 🚀 Getting Started
 
-### Prerequisites
-- **Node.js**: v18.0.0 or higher (v22+ recommended)
-- **MongoDB**: Local MongoDB instance running on `mongodb://127.0.0.1:27017` or MongoDB Atlas.
+### 1. Database Seeding
 
-### 1. Environment Configuration
+Populate MongoDB with default destinations, tour packages, sample payments, and demo user accounts.
 
-**Backend (`server/.env`):**
-```env
-PORT=5000
-MONGODB_URI=mongodb://127.0.0.1:27017/travelease
-CLIENT_URL=http://localhost:5173
-NODE_ENV=development
-JWT_SECRET=travelease_jwt_secret_key_review2_super_secure_2026
-JWT_EXPIRE=7d
-ADMIN_NAME=TravelEase Administrator
-ADMIN_EMAIL=admin@travelease.com
-ADMIN_PASSWORD=Admin@TravelEase2026!
-RAZORPAY_KEY_ID=rzp_test_placeholder_key
-RAZORPAY_KEY_SECRET=rzp_test_placeholder_secret
-```
-
-**Frontend (`client/.env`):**
-```env
-VITE_API_BASE_URL=http://localhost:5000/api/v1
-VITE_RAZORPAY_KEY_ID=rzp_test_placeholder_key
-```
-
-### 2. Database Seeding
-Populate MongoDB with default destinations, tour packages, verified sample payments, and the hashed Administrator and Demo accounts:
 ```bash
+# From the project root
 npm run seed
-# or
+
+# Alternatively
 cd server && npm run seed
 ```
 
-### 3. Launching the Application
-Run both server and client concurrently from the root directory:
+### 2. Launching the Application
+
+Run both the backend and frontend concurrently from the project root:
+
 ```bash
 npm run dev
 ```
 
-Or run them individually in separate terminals:
+Alternatively, run them individually in separate terminals.
+
+**Terminal 1 – Backend API Server**
+
 ```bash
-# Terminal 1 — Backend API Server (http://localhost:5000)
 cd server
 npm run dev
+```
 
-# Terminal 2 — Frontend Client (http://localhost:5173)
+**Terminal 2 – Frontend Client**
+
+```bash
 cd client
 npm run dev
 ```
 
-Open your browser at **`http://localhost:5173`**.
+### 3. Access the Application
+
+Once both servers are running, open your browser:
+
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:5000
+
+
 
 ---
 
@@ -210,14 +199,6 @@ The test suite validates:
 
 ---
 
-## 🔑 Credentials for College Demonstration
-
-| Account Type | Email | Password | Role | Access Route |
-|---|---|---|---|---|
-| **Administrator** | `admin@travelease.com` | `Admin@TravelEase2026!` | `admin` | `/admin/login` ➔ `/admin` |
-| **Demo Traveler** | `traveler@travelease.com` | `Traveler@2026!` | `user` | `/login` ➔ `/dashboard` |
-
-*(Note: Both login screens include convenient **Auto Fill** buttons for immediate demonstration during reviews).*
 
 ---
 
