@@ -79,3 +79,4 @@ migrateToAtlas().catch((err) => {
   console.error('\n❌ Migration Error:', err);
   process.exit(1);
 });
+
