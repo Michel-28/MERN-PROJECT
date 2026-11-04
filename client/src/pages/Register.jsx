@@ -51,16 +51,24 @@ export default function Register() {
 
     try {
       setLoading(true);
-      await register({
+      const cleanEmail = email.trim().toLowerCase();
+      const res = await register({
         name: name.trim(),
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         phone: phone.trim(),
         password,
         confirmPassword,
       });
 
-      toast.success(`Welcome to TravelEase, ${name.trim()}! Your account has been created.`);
-      navigate('/dashboard');
+      if (res?.requiresOtp) {
+        toast.success('Registration successful! Please check your email for your 6-digit OTP.');
+        navigate(`/verify-otp?email=${encodeURIComponent(cleanEmail)}`, {
+          state: { email: cleanEmail, name: name.trim() },
+        });
+      } else {
+        toast.success(`Welcome to TravelEase, ${name.trim()}! Your account has been created.`);
+        navigate('/dashboard');
+      }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
       setError(msg);

@@ -1,6 +1,8 @@
+process.env.NODE_ENV = 'test';
 const mongoose = require('mongoose');
 const request = require('http');
 require('dotenv').config({ path: __dirname + '/.env' });
+process.env.NODE_ENV = 'test';
 const app = require('./src/app');
 
 // Supertest-like lightweight HTTP runner using node http
@@ -65,11 +67,19 @@ const runTests = async () => {
       phone: '+91 9988776655',
       role: 'admin', // Attack attempt: should be ignored and set to 'user'
     });
-    assert(regRes.status === 201 && regRes.body.token, '1. User can register with valid fields');
+    process.env.NODE_ENV = 'test';
+    assert(regRes.status === 201 && regRes.body.requiresOtp, '1. User can register with valid fields');
     assert(regRes.body.user.role === 'user', '2. Public registration cannot escalate role to admin');
 
-    const userToken = regRes.body.token;
-    const userId = regRes.body.user.id;
+    // Verify OTP to activate account and acquire JWT token
+    const otpVerifyRes = await apiRequest('/auth/verify-otp', 'POST', {
+      email: testUserEmail,
+      otp: regRes.body.testOtp,
+    });
+    assert(otpVerifyRes.status === 200 && otpVerifyRes.body.token, '1b. OTP verification activates account and issues JWT token');
+
+    const userToken = otpVerifyRes.body.token;
+    const userId = otpVerifyRes.body.user.id;
 
     // Test 3: Duplicate Email Registration Rejection
     const dupRes = await apiRequest('/auth/register', 'POST', {
@@ -168,13 +178,18 @@ const runTests = async () => {
     assert(dupVerify.status === 200 && dupVerify.body.booking.status === 'Confirmed', '16. Idempotent payment verification');
 
     // Test 17: User Cannot View Other User's Booking by ID
+    const secondEmail = `second.${Date.now()}@example.com`;
     const secondUserReg = await apiRequest('/auth/register', 'POST', {
       name: 'Second User',
-      email: `second.${Date.now()}@example.com`,
+      email: secondEmail,
       password: 'Password@123',
       confirmPassword: 'Password@123',
     });
-    const secondUserToken = secondUserReg.body.token;
+    const secondUserVerify = await apiRequest('/auth/verify-otp', 'POST', {
+      email: secondEmail,
+      otp: secondUserReg.body.testOtp,
+    });
+    const secondUserToken = secondUserVerify.body.token;
 
     const crossUserAccess = await apiRequest(`/bookings/${testBooking._id}`, 'GET', null, secondUserToken);
     assert(crossUserAccess.status === 403, '17. User cannot view another user\'s private booking (403 Forbidden)');

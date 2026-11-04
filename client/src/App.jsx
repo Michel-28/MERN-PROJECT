@@ -18,6 +18,7 @@ import Contact from './pages/Contact';
 // Authentication pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyOtp from './pages/VerifyOtp';
 import AdminLogin from './pages/admin/AdminLogin';
 
 // User pages
@@ -65,6 +66,7 @@ export default function App() {
             {/* Authentication Pages */}
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
+            <Route path="verify-otp" element={<VerifyOtp />} />
             <Route path="admin/login" element={<AdminLogin />} />
 
             {/* Protected User Pages */}

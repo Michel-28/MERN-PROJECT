@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { loginUser, adminLoginUser, registerUser, googleAuthUser, getMe, updateProfile } from '../services/api';
+import {
+  loginUser,
+  adminLoginUser,
+  registerUser,
+  verifyOtp,
+  resendOtp,
+  googleAuthUser,
+  getMe,
+  updateProfile,
+} from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -78,14 +87,45 @@ export const AuthProvider = ({ children }) => {
   const register = async (formData) => {
     const res = await registerUser(formData);
     if (res.data?.success) {
-      const { token: receivedToken, user: receivedUser } = res.data;
-      localStorage.setItem('travelease_auth_token', receivedToken);
-      localStorage.setItem('travelease_auth_user', JSON.stringify(receivedUser));
-      setToken(receivedToken);
-      setUser(receivedUser);
-      return receivedUser;
+      if (res.data.requiresOtp) {
+        return res.data;
+      }
+      if (res.data.token && res.data.user) {
+        const { token: receivedToken, user: receivedUser } = res.data;
+        localStorage.setItem('travelease_auth_token', receivedToken);
+        localStorage.setItem('travelease_auth_user', JSON.stringify(receivedUser));
+        setToken(receivedToken);
+        setUser(receivedUser);
+        return receivedUser;
+      }
+      return res.data;
     }
     throw new Error(res.data?.message || 'Registration failed');
+  };
+
+  // Verify OTP Code
+  const verifyEmailOtp = async ({ email, otp }) => {
+    const res = await verifyOtp({ email, otp });
+    if (res.data?.success) {
+      const { token: receivedToken, user: receivedUser } = res.data;
+      if (receivedToken && receivedUser) {
+        localStorage.setItem('travelease_auth_token', receivedToken);
+        localStorage.setItem('travelease_auth_user', JSON.stringify(receivedUser));
+        setToken(receivedToken);
+        setUser(receivedUser);
+      }
+      return res.data;
+    }
+    throw new Error(res.data?.message || 'Verification failed');
+  };
+
+  // Resend OTP Code
+  const resendVerificationOtp = async ({ email }) => {
+    const res = await resendOtp({ email });
+    if (res.data?.success) {
+      return res.data;
+    }
+    throw new Error(res.data?.message || 'Failed to resend verification code');
   };
 
   // Google Login / OAuth
@@ -135,6 +175,8 @@ export const AuthProvider = ({ children }) => {
         login,
         adminLogin,
         register,
+        verifyEmailOtp,
+        resendVerificationOtp,
         googleLogin,
         logout,
         updateUser,

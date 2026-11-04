@@ -15,12 +15,14 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
   const redirectPath = location.state?.from?.pathname || '/dashboard';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setUnverifiedEmail('');
 
     if (!email || !password) {
       setError('Please enter both email and password');
@@ -29,12 +31,16 @@ export default function Login() {
 
     try {
       setLoading(true);
-      const user = await login(email.trim().toLowerCase(), password);
+      const cleanEmail = email.trim().toLowerCase();
+      const user = await login(cleanEmail, password);
       toast.success(`Welcome back, ${user.name}!`);
       navigate(redirectPath, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Invalid email or password';
       setError(msg);
+      if (err.response?.status === 403 && err.response?.data?.isEmailVerified === false) {
+        setUnverifiedEmail(err.response?.data?.email || email.trim().toLowerCase());
+      }
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -60,8 +66,19 @@ export default function Login() {
 
         {/* Error alert */}
         {error && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium animate-fadeIn">
-            {error}
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium animate-fadeIn space-y-2">
+            <p>{error}</p>
+            {unverifiedEmail && (
+              <div className="pt-1">
+                <Link
+                  to={`/verify-otp?email=${encodeURIComponent(unverifiedEmail)}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-sm transition"
+                >
+                  <span>Verify Email OTP Now</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
