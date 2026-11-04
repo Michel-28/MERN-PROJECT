@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const tripController = require('../controllers/tripController');
+const { optionalProtect } = require('../middleware/auth');
+
+router.use(optionalProtect);
 
 router.get('/', tripController.getTrips);
 router.post('/', tripController.createTrip);

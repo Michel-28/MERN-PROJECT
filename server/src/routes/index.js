@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
+const authRoutes = require('./authRoutes');
+const paymentRoutes = require('./paymentRoutes');
 const destinationRoutes = require('./destinationRoutes');
 const packageRoutes = require('./packageRoutes');
 const tripRoutes = require('./tripRoutes');
@@ -14,10 +16,14 @@ router.get('/health', (req, res) => {
     status: 'ok',
     service: 'TravelEase API',
     timestamp: new Date().toISOString(),
+    auth: 'JWT & Role-Based Access Control',
+    payments: 'Razorpay & Test Gateway Verification',
   });
 });
 
 // Resource endpoints
+router.use('/auth', authRoutes);
+router.use('/payments', paymentRoutes);
 router.use('/destinations', destinationRoutes);
 router.use('/packages', packageRoutes);
 router.use('/trips', tripRoutes);

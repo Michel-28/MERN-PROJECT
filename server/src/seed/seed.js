@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const Destination = require('../models/Destination');
 const TourPackage = require('../models/TourPackage');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
+const Payment = require('../models/Payment');
 const { destinationsData } = require('./seedData');
 
 const futureDates = [
@@ -379,44 +381,131 @@ const seedDatabase = async () => {
     }
     console.log(`[Seed] Seeded ${packagesData.length} tour packages.`);
 
-    // Sample demo bookings so admin stats and availability look realistic right away!
+    // Seed Initial Administrator using environment variables
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@travelease.com').toLowerCase().trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@TravelEase2026!';
+    const adminName = process.env.ADMIN_NAME || 'TravelEase Administrator';
+
+    let adminUser = await User.findOne({ email: adminEmail });
+    if (!adminUser) {
+      adminUser = await User.create({
+        name: adminName,
+        email: adminEmail,
+        password: adminPassword,
+        role: 'admin',
+        phone: '+91 98765 43210',
+      });
+      console.log(`[Seed] Created Administrator: ${adminEmail} (Role: admin)`);
+    } else {
+      adminUser.role = 'admin';
+      adminUser.name = adminName;
+      adminUser.password = adminPassword;
+      await adminUser.save();
+      console.log(`[Seed] Updated Administrator credentials for ${adminEmail}`);
+    }
+
+    // Seed Sample Demo User
+    const demoEmail = 'traveler@travelease.com';
+    let demoUser = await User.findOne({ email: demoEmail });
+    if (!demoUser) {
+      demoUser = await User.create({
+        name: 'Demo Traveler',
+        email: demoEmail,
+        password: 'Traveler@2026!',
+        role: 'user',
+        phone: '+91 91234 56789',
+      });
+      console.log(`[Seed] Created Demo User: ${demoEmail}`);
+    }
+
+    // Sample bookings with verified payment records
     const samplePackage = await TourPackage.findOne({ slug: 'ooty-nilgiri-tea-heritage-escape' });
-    if (samplePackage) {
-      await Booking.findOneAndUpdate(
+    if (samplePackage && demoUser) {
+      const amount1 = samplePackage.pricePerTraveler * 2;
+      const booking1 = await Booking.findOneAndUpdate(
         { bookingReference: 'TE-DEMO01' },
         {
           bookingReference: 'TE-DEMO01',
-          email: 'traveler@travelease.com',
+          user: demoUser._id,
+          email: demoUser.email,
+          customerName: demoUser.name,
+          contactPhone: demoUser.phone,
           package: samplePackage._id,
           packageTitleSnapshot: samplePackage.title,
           destinationSnapshot: 'Ooty',
           departureDate: new Date('2026-11-10'),
           travelerCount: 2,
           pricePerTraveler: samplePackage.pricePerTraveler,
-          totalAmount: samplePackage.pricePerTraveler * 2,
+          totalAmount: amount1,
           currency: 'INR',
           status: 'Confirmed',
+          paymentStatus: 'paid',
+          paymentReference: 'pay_test_ooty_demo01',
         },
         { upsert: true, new: true }
       );
 
-      await Booking.findOneAndUpdate(
+      // Create linked payment record
+      await Payment.findOneAndUpdate(
+        { booking: booking1._id },
+        {
+          booking: booking1._id,
+          user: demoUser._id,
+          provider: 'test_gateway',
+          gatewayOrderId: 'order_test_demo01',
+          gatewayPaymentId: 'pay_test_ooty_demo01',
+          gatewaySignature: 'test_verified_signature_demo01',
+          amount: amount1,
+          currency: 'INR',
+          status: 'paid',
+          paymentMethod: 'UPI / NetBanking',
+          verifiedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      );
+
+      const amount2 = samplePackage.pricePerTraveler * 3;
+      const booking2 = await Booking.findOneAndUpdate(
         { bookingReference: 'TE-DEMO02' },
         {
           bookingReference: 'TE-DEMO02',
+          user: demoUser._id,
           email: 'alex.wanderer@gmail.com',
+          customerName: 'Alex Wanderer',
           package: samplePackage._id,
           packageTitleSnapshot: samplePackage.title,
           destinationSnapshot: 'Ooty',
           departureDate: new Date('2026-12-05'),
           travelerCount: 3,
           pricePerTraveler: samplePackage.pricePerTraveler,
-          totalAmount: samplePackage.pricePerTraveler * 3,
+          totalAmount: amount2,
           currency: 'INR',
           status: 'Confirmed',
+          paymentStatus: 'paid',
+          paymentReference: 'pay_test_ooty_demo02',
         },
         { upsert: true, new: true }
       );
+
+      await Payment.findOneAndUpdate(
+        { booking: booking2._id },
+        {
+          booking: booking2._id,
+          user: demoUser._id,
+          provider: 'test_gateway',
+          gatewayOrderId: 'order_test_demo02',
+          gatewayPaymentId: 'pay_test_ooty_demo02',
+          gatewaySignature: 'test_verified_signature_demo02',
+          amount: amount2,
+          currency: 'INR',
+          status: 'paid',
+          paymentMethod: 'Credit Card',
+          verifiedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      );
+
+      console.log('[Seed] Created verified demo bookings and payments.');
     }
 
     console.log('[Seed] Database seeding completed successfully! 🎉');

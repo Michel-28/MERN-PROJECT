@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import DemoLoginModal from '../components/DemoLoginModal';
 import { Toaster } from 'react-hot-toast';
 
 export default function RootLayout() {
@@ -46,7 +45,6 @@ export default function RootLayout() {
         <Outlet />
       </main>
       <Footer />
-      <DemoLoginModal />
     </div>
   );
 }

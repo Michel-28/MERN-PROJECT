@@ -1,10 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/adminController');
+const {
+  getDashboardStats,
+  getAdminBookings,
+  getAdminBookingDetails,
+  getAdminUsers,
+  getAdminDestinations,
+  getAdminPackages,
+} = require('../controllers/adminController');
+const { protect, authorize } = require('../middleware/auth');
 
-router.get('/dashboard/stats', adminController.getDashboardStats);
-router.get('/bookings', adminController.getAdminBookings);
-router.get('/destinations', adminController.getAdminDestinations);
-router.get('/packages', adminController.getAdminPackages);
+// Strict server-side security: every admin route requires authentication & admin role
+router.use(protect);
+router.use(authorize('admin'));
+
+router.get('/dashboard/stats', getDashboardStats);
+router.get('/bookings', getAdminBookings);
+router.get('/bookings/:id', getAdminBookingDetails);
+router.get('/users', getAdminUsers);
+router.get('/destinations', getAdminDestinations);
+router.get('/packages', getAdminPackages);
 
 module.exports = router;

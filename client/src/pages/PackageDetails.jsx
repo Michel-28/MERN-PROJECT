@@ -13,7 +13,8 @@ import {
   ChevronUp,
   ArrowRight,
   Info,
-  CalendarCheck
+  CalendarCheck,
+  Lock,
 } from 'lucide-react';
 import { getPackage, getPackageAvailability, createBooking } from '../services/api';
 import { useDemoUser } from '../context/DemoUserContext';
@@ -73,13 +74,8 @@ export default function PackageDetails() {
     }
   }, [pkg?._id, departureDate]);
 
-  const handleBookingSubmit = async (e) => {
+  const handleBookingSubmit = (e) => {
     e.preventDefault();
-
-    if (!isAuthenticated) {
-      openLoginModal(() => handleBookingSubmit(e));
-      return;
-    }
 
     if (!departureDate) {
       toast.error('Please select an available departure date');
@@ -91,23 +87,8 @@ export default function PackageDetails() {
       return;
     }
 
-    try {
-      setBookingLoading(true);
-      const res = await createBooking({
-        packageId: pkg._id,
-        email: user.email,
-        departureDate,
-        travelerCount: travelers,
-      });
-
-      toast.success('Reservation confirmed successfully! 🎉');
-      navigate(`/booking-confirmation/${res.data.data._id}`);
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to complete booking';
-      toast.error(msg);
-    } finally {
-      setBookingLoading(false);
-    }
+    // Direct to dedicated review and checkout page
+    navigate(`/packages/${pkg.slug || pkg._id}/book`);
   };
 
   if (loading) {
@@ -448,26 +429,25 @@ export default function PackageDetails() {
                 </div>
               </div>
 
-              {/* Demo User Notice */}
+              {/* User Notice */}
               <div className="flex items-center gap-2 text-[11px] text-slate-500">
                 <Info className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                 <span>
-                  Booking for: <strong className="text-navy-900">{user?.email || 'Demo Traveler'}</strong>
+                  Booking for: <strong className="text-navy-900">{user?.name || user?.email || 'Authenticated Traveler'}</strong>
                 </span>
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={bookingLoading}
-                className="w-full py-3.5 px-4 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-md hover:shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full py-3.5 px-4 rounded-xl font-bold text-xs text-white bg-teal-600 hover:bg-teal-700 shadow-md hover:shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-2"
               >
-                <CalendarCheck className="w-4 h-4" />
-                <span>{bookingLoading ? 'Reserving Tour...' : 'Confirm Demo Booking'}</span>
+                <Lock className="w-4 h-4" />
+                <span>Proceed to Checkout & Payment</span>
               </button>
 
               <p className="text-center text-[10px] text-slate-400">
-                ⚡ Instant demonstration confirmation. No payment gateway required.
+                🔒 Includes review, server price validation & Razorpay verification.
               </p>
             </form>
 

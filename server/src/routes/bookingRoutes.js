@@ -1,10 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const bookingController = require('../controllers/bookingController');
+const {
+  getBookings,
+  getBookingById,
+  createBooking,
+  cancelBooking,
+} = require('../controllers/bookingController');
+const { protect } = require('../middleware/auth');
 
-router.get('/', bookingController.getBookings);
-router.post('/', bookingController.createBooking);
-router.get('/:id', bookingController.getBookingById);
-router.patch('/:id/cancel', bookingController.cancelBooking);
+// All booking operations require valid authentication
+router.route('/')
+  .get(protect, getBookings)
+  .post(protect, createBooking);
+
+router.route('/:id')
+  .get(protect, getBookingById);
+
+router.route('/:id/cancel')
+  .patch(protect, cancelBooking);
 
 module.exports = router;

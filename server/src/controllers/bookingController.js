@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const Booking = require('../models/Booking');
 const TourPackage = require('../models/TourPackage');
+const Payment = require('../models/Payment');
 
 // Helper to generate unique booking reference
 const generateBookingRef = () => {
@@ -12,19 +13,33 @@ const generateBookingRef = () => {
   return ref;
 };
 
-// GET /api/v1/bookings?email=...
+// GET /api/v1/bookings
+// Authenticated user gets their own bookings
 exports.getBookings = async (req, res, next) => {
   try {
-    const { email } = req.query;
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email parameter is required',
-      });
+    const user = req.user;
+    let filter = {};
+
+    if (user.role === 'admin' && req.query.all === 'true') {
+      // Admin requesting all bookings
+      filter = {};
+    } else {
+      // Normal user: strictly scoped to own account
+      filter = {
+        $or: [
+          { user: user._id },
+          { email: user.email.toLowerCase().trim() },
+        ],
+      };
     }
 
-    const bookings = await Booking.find({ email: email.toLowerCase().trim() })
+    if (req.query.status && req.query.status !== 'All') {
+      filter.status = req.query.status;
+    }
+
+    const bookings = await Booking.find(filter)
       .populate('package')
+      .populate('payment')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -38,21 +53,41 @@ exports.getBookings = async (req, res, next) => {
 };
 
 // GET /api/v1/bookings/:id
+// Retrieve single booking with strict ownership check
 exports.getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
     let booking;
 
     if (id.startsWith('TE-')) {
-      booking = await Booking.findOne({ bookingReference: id }).populate('package');
+      booking = await Booking.findOne({ bookingReference: id })
+        .populate('package')
+        .populate('payment')
+        .populate('user', 'name email phone');
     } else {
-      booking = await Booking.findById(id).populate('package');
+      booking = await Booking.findById(id)
+        .populate('package')
+        .populate('payment')
+        .populate('user', 'name email phone');
     }
 
     if (!booking) {
       return res.status(404).json({
         success: false,
         message: 'Booking not found',
+      });
+    }
+
+    // Ownership verification
+    const isOwner =
+      (booking.user && booking.user._id.toString() === req.user._id.toString()) ||
+      booking.email.toLowerCase() === req.user.email.toLowerCase() ||
+      req.user.role === 'admin';
+
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: You do not have permission to view this booking',
       });
     }
 
@@ -66,14 +101,22 @@ exports.getBookingById = async (req, res, next) => {
 };
 
 // POST /api/v1/bookings
+// Create a pending reservation awaiting payment verification
 exports.createBooking = async (req, res, next) => {
   try {
-    const { packageId, email, departureDate, travelerCount } = req.body;
+    const {
+      packageId,
+      departureDate,
+      travelerCount,
+      contactPhone,
+      specialRequests,
+      customerName,
+    } = req.body;
 
-    if (!packageId || !email || !departureDate || !travelerCount) {
+    if (!packageId || !departureDate || !travelerCount) {
       return res.status(400).json({
         success: false,
-        message: 'Package, email, departure date, and traveler count are required',
+        message: 'Tour package, departure date, and traveler count are required',
       });
     }
 
@@ -81,7 +124,7 @@ exports.createBooking = async (req, res, next) => {
     if (isNaN(count) || count < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Traveler count must be at least 1',
+        message: 'Traveler count must be at least 1 person',
       });
     }
 
@@ -101,7 +144,7 @@ exports.createBooking = async (req, res, next) => {
       });
     }
 
-    // Capacity checking
+    // Capacity checking for this departure date
     const startOfDay = new Date(depDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(depDate);
@@ -109,7 +152,7 @@ exports.createBooking = async (req, res, next) => {
 
     const existingBookings = await Booking.find({
       package: tourPackage._id,
-      status: 'Confirmed',
+      status: { $in: ['Confirmed', 'Pending Payment'] },
       departureDate: { $gte: startOfDay, $lte: endOfDay },
     });
 
@@ -120,15 +163,15 @@ exports.createBooking = async (req, res, next) => {
     if (count > availableSpots) {
       return res.status(400).json({
         success: false,
-        message: `Only ${Math.max(0, availableSpots)} spot(s) remaining for this departure date. Requested: ${count}`,
+        message: `Only ${Math.max(0, availableSpots)} spot(s) remaining for this departure. Requested: ${count}`,
       });
     }
 
-    // SERVER-SIDE price recalculation
+    // Server-side authoritative price calculation (never trust client total)
     const pricePerTraveler = tourPackage.pricePerTraveler;
     const totalAmount = pricePerTraveler * count;
 
-    // Generate unique reference
+    // Generate collision-resistant unique reference
     let bookingReference = generateBookingRef();
     let collision = await Booking.findOne({ bookingReference });
     while (collision) {
@@ -140,7 +183,10 @@ exports.createBooking = async (req, res, next) => {
 
     const booking = await Booking.create({
       bookingReference,
-      email: email.toLowerCase().trim(),
+      user: req.user._id,
+      email: req.user.email.toLowerCase().trim(),
+      customerName: customerName ? customerName.trim() : req.user.name,
+      contactPhone: contactPhone ? contactPhone.trim() : req.user.phone || '',
       package: tourPackage._id,
       packageTitleSnapshot: tourPackage.title,
       destinationSnapshot: destinationName,
@@ -149,13 +195,15 @@ exports.createBooking = async (req, res, next) => {
       pricePerTraveler,
       totalAmount,
       currency: tourPackage.currency || 'INR',
-      status: 'Confirmed',
+      status: 'Pending Payment',
+      paymentStatus: 'pending',
+      specialRequests: specialRequests ? specialRequests.trim() : '',
     });
 
     res.status(201).json({
       success: true,
       data: booking,
-      message: 'Booking confirmed successfully!',
+      message: 'Pending booking created. Proceed to payment gateway.',
     });
   } catch (error) {
     next(error);
@@ -163,15 +211,30 @@ exports.createBooking = async (req, res, next) => {
 };
 
 // PATCH /api/v1/bookings/:id/cancel
+// User or Admin initiates cancellation and refund evaluation
 exports.cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const booking = await Booking.findById(id);
+    const { reason = 'Cancelled by customer' } = req.body;
 
+    const booking = await Booking.findById(id).populate('package');
     if (!booking) {
       return res.status(404).json({
         success: false,
         message: 'Booking not found',
+      });
+    }
+
+    // Ownership check
+    const isOwner =
+      (booking.user && booking.user.toString() === req.user._id.toString()) ||
+      booking.email.toLowerCase() === req.user.email.toLowerCase() ||
+      req.user.role === 'admin';
+
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: You cannot cancel this booking',
       });
     }
 
@@ -182,13 +245,63 @@ exports.cancelBooking = async (req, res, next) => {
       });
     }
 
+    // Evaluate refund policy
+    // If departure date is > 7 days away: 100% refund
+    // If departure date is 3-7 days away: 70% refund
+    // If departure date < 48 hours: no refund
+    const now = new Date();
+    const departure = new Date(booking.departureDate);
+    const diffDays = Math.ceil((departure - now) / (1000 * 60 * 60 * 24));
+
+    let refundPercentage = 100;
+    if (diffDays < 2) {
+      refundPercentage = 0;
+    } else if (diffDays <= 7) {
+      refundPercentage = 70;
+    }
+
+    const wasPaid = booking.paymentStatus === 'paid';
+    const refundAmount = wasPaid ? Math.round((booking.totalAmount * refundPercentage) / 100) : 0;
+    const refundStatus = wasPaid
+      ? refundAmount > 0
+        ? 'processed'
+        : 'ineligible'
+      : 'none';
+
     booking.status = 'Cancelled';
+    booking.cancellation = {
+      cancelledAt: new Date(),
+      reason,
+      cancelledBy: req.user.role === 'admin' ? 'admin' : 'user',
+      refundStatus,
+      refundAmount,
+      refundTransactionId: wasPaid && refundAmount > 0 ? `ref_test_${Date.now()}` : null,
+    };
+
+    if (wasPaid && refundAmount > 0) {
+      booking.paymentStatus = 'refunded';
+      // Also update linked Payment model
+      await Payment.findOneAndUpdate(
+        { booking: booking._id },
+        {
+          status: 'refunded',
+          'refund.refundId': booking.cancellation.refundTransactionId,
+          'refund.amount': refundAmount,
+          'refund.status': 'refunded',
+          'refund.refundedAt': new Date(),
+          'refund.reason': reason,
+        }
+      );
+    }
+
     await booking.save();
 
     res.json({
       success: true,
       data: booking,
-      message: 'Booking cancelled successfully',
+      message: wasPaid
+        ? `Booking cancelled. Test refund of ₹${refundAmount.toLocaleString('en-IN')} (${refundPercentage}%) has been processed to your original payment method.`
+        : 'Booking cancelled successfully.',
     });
   } catch (error) {
     next(error);
