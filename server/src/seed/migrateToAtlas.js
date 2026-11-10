@@ -1,9 +1,17 @@
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const path = require('path');
 
-const localUri = 'mongodb://127.0.0.1:27017/travelease';
-const atlasUri = 'mongodb+srv://kartheekbv2858_db_user:iwbpF2roR9yDun7b@cluster0.m3ejlwc.mongodb.net/travelease?retryWrites=true&w=majority&appName=Cluster0';
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
+const localUri = process.env.LOCAL_MONGODB_URI;
+const atlasUri = process.env.MONGODB_URI;
 
 async function migrateToAtlas() {
+  if (!localUri || !atlasUri) {
+    throw new Error('LOCAL_MONGODB_URI and MONGODB_URI must be set in server/.env');
+  }
+
   console.log('\n=================== MIGRATING DATA & SCHEMAS TO MONGODB ATLAS ===================\n');
 
   console.log('1. Connecting to Local MongoDB (Compass)...');
@@ -79,4 +87,3 @@ migrateToAtlas().catch((err) => {
   console.error('\n❌ Migration Error:', err);
   process.exit(1);
 });
-
